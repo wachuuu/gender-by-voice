@@ -3,7 +3,8 @@ import numpy as np
 import sys
 from scipy.fftpack import fft, fftfreq
 from scipy.signal import decimate
-
+from os import listdir
+from os.path import isfile, join
 
 def read_file(filename):
   wav, rate = soundfile.read(filename, always_2d=True)
@@ -28,7 +29,7 @@ def hps(signal, n):
     downsampled = decimate(signal, k)
     # multiply original signal with downsampled one
     output[:len(downsampled)] *= downsampled
-  output[:10] = 0
+  # output[:10] = 0
   return output
 
 def detect_voice(frequencies, data):
@@ -53,13 +54,44 @@ def detect_voice(frequencies, data):
   if female_lowest <= fundamental_freq < female_highest: return 'K'
   return 'M'
 
-def main():
-  filename = sys.argv[1]
+def recognize(filename):
+  # filename = sys.argv[1]
   data, rate = read_file(filename)
   frequencies, fft_data = prepare_data(data, rate)
   hps_data = hps(fft_data, 4)
   gender = detect_voice(frequencies, hps_data)
-  print(gender)
+  return gender
+
+def check_filename(file):
+  if "K" in file: return 'K'
+  if "M" in file: return 'M'
+
+
+def main():
+  # expected - actual
+  m_m = 0
+  k_k = 0
+  m_k = 0
+  k_m = 0
+  files = [f for f in listdir("./train/") if isfile(join("./train/", f))]
+  for i, file in enumerate(files):
+    expected = check_filename(file)
+    actual = recognize("./train/"+file)
+    print(i, "-")
+    print(expected, actual)
+    print("----")
+    
+    if (expected == 'M' and actual == 'M'): m_m+=1
+    if (expected == 'M' and actual == 'K'): m_k+=1
+    if (expected == 'K' and actual == 'M'): k_m+=1
+    if (expected == 'K' and actual == 'K'): k_k+=1
+
+  print("---------------------------------")
+  print("exp. m act m", m_m)
+  print("exp. m act k", m_k)
+  print("exp. k act m", k_m)
+  print("exp. k act k", k_k)
+    
 
 if __name__ == '__main__':
   main()
